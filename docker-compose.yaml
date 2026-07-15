@@ -1,0 +1,62 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: "passbolt"
+      POSTGRES_USER: "passbolt"
+      POSTGRES_PASSWORD: "P4ssb0lt_db_password"
+    volumes:
+      - postgres_volume:/var/lib/postgresql/data
+
+  passbolt:
+    image: passbolt/passbolt:latest-ce
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      APP_FULL_BASE_URL: http://localhost:5880
+      DATASOURCES_DEFAULT_HOST: "db"
+      DATASOURCES_DEFAULT_PORT: "5432"
+      DATASOURCES_DEFAULT_USERNAME: "passbolt"
+      DATASOURCES_DEFAULT_PASSWORD: "P4ssb0lt_db_password"
+      DATASOURCES_DEFAULT_DATABASE: "passbolt"
+      DATASOURCES_DEFAULT_DRIVER: 'Cake\Database\Driver\Postgres'
+      DATASOURCES_DEFAULT_ENCODING: "utf8"
+      
+      # ====================================================================
+      # EMAIL/SMTP CONFIGURATION (Optional - uncomment to enable env-based config)
+      # ====================================================================
+      # PASSBOLT_PLUGINS_SMTP_SETTINGS_ENABLED: "false" # Set to false to force env vars instead of Web UI
+      # EMAIL_TRANSPORT_DEFAULT_HOST: "smtp.gmail.com"
+      # EMAIL_TRANSPORT_DEFAULT_PORT: "587"
+      # EMAIL_TRANSPORT_DEFAULT_USERNAME: "your_email@gmail.com"
+      # EMAIL_TRANSPORT_DEFAULT_PASSWORD: "your_app_password"
+      # EMAIL_TRANSPORT_DEFAULT_TLS: "true"
+      # EMAIL_DEFAULT_FROM: "your_email@gmail.com"
+    volumes:
+      - gpg_volume:/etc/passbolt/gpg
+      - jwt_volume:/etc/passbolt/jwt
+    command: [ "/usr/bin/wait-for.sh", "-t", "0", "db:5432", "--", "/docker-entrypoint.sh" ]
+    ports:
+      - 5880:80
+      - 8444:443
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "admin@domain.com"
+      PGADMIN_DEFAULT_PASSWORD: "P4ssb0lt_pgadmin"
+    ports:
+      - "8080:80"
+    volumes:
+      - pgadmin_volume:/var/lib/pgadmin
+    depends_on:
+      - db
+
+volumes:
+  postgres_volume:
+  gpg_volume:
+  jwt_volume:
+  pgadmin_volume:
